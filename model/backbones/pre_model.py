@@ -6,6 +6,8 @@ from pathlib import Path
 import torch.nn as nn
 import torch
 from typing import Callable, List, Tuple
+
+
 from model.utils.extraction import instantiate_extractor
 from model.vitac.v_repic import V_RePic
 from model.vitac.vtt_reall import VTT_ReAll
@@ -259,6 +261,12 @@ class EncoderVE_T(nn.Module):
             p_feat_img = self.projector_img(feat_img)
             p_feat_tac = self.projector_tac(tac)
             return torch.cat([p_feat_img, p_feat_tac], dim=-1), torch.cat([feat_img, tac], dim=1)
+        elif self.model_name in {"dinov2"}:
+            feat_img = self.backbone_img.__call__(imag)
+            feat_img = torch.flatten(feat_img, 1)
+            p_feat_img = self.projector_img(feat_img)
+            p_feat_tac = self.projector_tac(tac)
+            return torch.cat([p_feat_img, p_feat_tac], dim=-1), torch.cat([feat_img, tac], dim=1)
         else:
             raise AssertionError(f"Error Model Name {self.model_name}")
 
@@ -501,6 +509,12 @@ MODEL_REGISTRY = {
         "cls": None
     },
 
+    "dinov2": {
+        "config": "model/backbones/pre_model_baselines/resnet18/resnet18-5c106cde.pth",  # irrelavant path
+        "checkpoint": "model/backbones/pre_model_baselines/dinov2/dinov2_vits14_pretrain.pth",
+        "cls": None
+    },
+
 }
 def load(model_id: str, freeze: bool = True, cache: str = DEFAULT_CACHE, device: torch.device = "cpu"):
     """
@@ -538,6 +552,13 @@ def load(model_id: str, freeze: bool = True, cache: str = DEFAULT_CACHE, device:
         model.load_state_dict(state_dict)
         emb_dim = list(model.children())[-1].in_features
         model = nn.Sequential(*list(model.children())[:-1])  # abandon the last two layers
+    elif model_id=="dinov2":
+        from model.backbones.pre_model_baselines.dinov2.hub.backbones import dinov2_vits14
+        model = dinov2_vits14(pretrained=True)
+        state_dict = torch.load("model/backbones/pre_model_baselines/dinov2/dinov2_vits14_pretrain.pth", map_location=device)
+        model.load_state_dict(state_dict, strict=True)
+        model.to(device).eval()
+        emb_dim = 384
     else:
         # Load Configuration --> patch `hf_cache` key if present (don't download to random locations on filesystem)
         with open(config_path, "r") as f:

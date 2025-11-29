@@ -512,6 +512,13 @@ def get_args():
         args.task_envs["env"]["obs_type"] = "VisTac"
         args.task_envs["env"]["obs_dim"]["vis"] = 150528
         args.task_envs["env"]["obs_dim"]["tac"] = 20
+    elif args.task.split("-")[-1] == "vt_dinov2":
+        args.models["encoder"]["name"] = "dinov2"
+        args.models["encoder"]["en_mode"] = "cls"
+        args.models["policy"]["actor_critic"] = "ActorCriticVEncoderT"
+        args.task_envs["env"]["obs_type"] = "VisTac"
+        args.task_envs["env"]["obs_dim"]["vis"] = 150528
+        args.task_envs["env"]["obs_dim"]["tac"] = 20
 
     elif args.task.split("-")[-1] == "v_clip":
         args.models["encoder"]["name"] = "CLIP"
